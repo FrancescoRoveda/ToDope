@@ -1,0 +1,83 @@
+body{
+    height:100vh;
+    width:100vw;
+    background-color: #000;
+}
+
+h1{
+    font-family: 'Roboto', sans-serif;
+    color: #fff;
+    font-weight: 900;
+}
+
+p {
+    font-family: 'Roboto', sans-serif;
+    color: #fff;
+    font-weight: 200;
+}
+#logout{
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 100px;
+}
+
+#loginContainer{
+    display:none;
+}
+
+#dashboard {
+    display: none;
+    margin-top: 8rem;
+}
+
+#addTask{
+    font-size: 50px;
+    color: white;
+}
+
+.modal-content{
+    background-color:#292929;
+}
+
+tr, td{
+    border: 0;
+}
+
+.taskCircle {
+    color: #fff;
+    font-size: 40px;
+}
+
+
+.w-10{
+    width:10%
+}
+.w-40{
+    width: 40%;
+}
+
+.taskName{
+    text-align: left;
+}
+
+.taskTime, .timeSelector {
+    text-decoration: none!important;
+    color: rgb(97, 97, 97);
+}
+
+.taskTime:hover, .timeSelector:hover {
+    text-decoration: none !important;
+    color: #fff;
+}
+
+.taskTimeActive,
+.timeSelectorActive {
+    text-decoration: underline !important;
+    color: #fff;
+}
+
+
+.text-right{
+    text-align: end;
+}
