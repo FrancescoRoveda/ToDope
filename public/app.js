@@ -25,46 +25,72 @@ auth.onAuthStateChanged(user => {
     }
 })
 
+var db = firebase.firestore();
+if (location.hostname === "localhost") {
+  db.useEmulator("localhost", 8080);
+}
 
-const db = firebase.firestore();
-const thingsList = document.getElementById("taskList");
+const thingsList = document.getElementById("taskListV2");
 let thingsRef;
 let unsubscribe;
 
-
-
-function getDate(delay) {
+function getDate(delay, Tasktime) {
     const d = new Date()
-    d.setDate(d.getDate() + delay);
-    const yy = new Intl.DateTimeFormat('en', {
-        year: 'numeric'
-    }).format(d)
-    const mm = new Intl.DateTimeFormat('en', {
-        month: '2-digit'
-    }).format(d)
-    const dd = new Intl.DateTimeFormat('en', {
-        day: '2-digit'
-    }).format(d)
-    return `${yy}-${mm}-${dd}`
+    d.setDate(d.getDate() + delay)
+    if (Tasktime != null){
+        splitted = Tasktime.split(":")
+        d.setHours(splitted[0])
+        d.setMinutes(splitted[1])
+    }
+    return firebase.firestore.Timestamp.fromDate(d)
 }
 
-
+function parseDate(date, Tasktime){
+    return firebase.firestore.Timestamp.fromMillis(Date.parse(date + " " + Tasktime))
+}
 
 
 auth.onAuthStateChanged(user => {
     if (user) {
-        $(".taskTime").on("click", function () {
-            $(this).toggleClass('taskTimeActive');
+        $(".taskDate").on("click", function () {
+            $(this).toggleClass('taskDateActive');
             if (this.id == "planned") {
-                $("#TaskDate").toggle()
+                $("#taskPlannedDate").show()
             }
         })
 
+        thingsRef = db.collection('tasks')
+        $("#submitTask").on('click', () => {
+            var taskTime = $("#TaskTime").val()
+            $(".taskDate").each(function () {
+                if ($(this).hasClass("taskDateActive")) {
+                    switch (this.id) {
+                        case "today":
+                            addToDb(getDate(0, taskTime))
+                            break
+                        case "tomorrow":
+                            addToDb(getDate(1, taskTime))
+                            break
+                        case "planned":
+                            console.log("Adding planned task to db: "+$("#taskPlannedDate").val());
+                            addToDb(parseDate($("#taskPlannedDate").val(), taskTime))
+                            break
+                        case "anytime":
+                            addToDb(null)
+                            break
+                    }
+                }
+                $(this).removeClass("taskDateActive")
+            });
+            $('#addTaskModal').modal('hide')
+            $("#taskPlannedDate").val('');
+            $("#TaskTime").val('');
+            $("#taskName").val('');
+        })
 
         function addToDb(dueDate) {
-            const {
-                serverTimestamp
-            } = firebase.firestore.FieldValue;
+            console.log("Adding task to db: "+$("#taskName").val() + " "+ dueDate);
+            const { serverTimestamp } = firebase.firestore.FieldValue;
             thingsRef.add({
                 uid: user.uid,
                 Name: $("#taskName").val(),
@@ -74,32 +100,8 @@ auth.onAuthStateChanged(user => {
             })
         }
 
-        thingsRef = db.collection('tasks')
-        $("#submitTask").on('click', () => {
-            $(".taskTime").each(function () {
-                if ($(this).hasClass("taskTimeActive")) {
-                    switch (this.id) {
-                        case "today":
-                            addToDb(getDate(0))
-                            break
-                        case "tomorrow":
-                            addToDb(getDate(1))
-                            break
-                        case "planned":
-                            addToDb($("#TaskDate").val())
-                            break
-                        case "anytime":
-                            addToDb("00-00-00")
-                            break
-                    }
-                }
-                $(this).removeClass("taskTimeActive")
-            });
-            $('#addTaskModal').modal('hide')
-        })
-
         $(document).ready(function() {
-            displayTask(getDate(0), "==")
+            displayTask()
         })
 
         $(".timeSelector").on('click', function () {
@@ -108,71 +110,105 @@ auth.onAuthStateChanged(user => {
                 thingsList.innerHTML = ""
             })
             $(this).addClass('timeSelectorActive')
-            console.log(this.id);
-            switch (this.id) {
-                case "selectorToday":
-                    console.log("Today");
-                    displayTask(getDate(0), "==")
-                    break
-                case "selectorTomorrow":
-                    console.log("Tomorrow");
-                    displayTask(getDate(1), "==")
-                    break
-                case "selectorPlanned":
-                    console.log("Planned");
-                    displayTask(getDate(1), ">")
-                    break
-                case "selectorAnytime":
-                    console.log("Anytime");
-                    displayTask("00-00-00", "==")
-                    break
-                case "selectorDone":
-                    console.log("done");
-                    displayTask("0000-00-00", ">", true)
-                    break
-            }
+            RenderTasks(this.id)
         })
 
-        function displayTask(SelectorDate, symbol, status = false) {
+        async function displayTask(status = false) {
+            console.log("requests");
             unsubscribe = thingsRef
                 .where('uid', '==', user.uid)
                 .where("Status", "==", status)
-                .where("DueDate", `${symbol}`, SelectorDate)
+                .orderBy("DueDate", "asc")
                 .onSnapshot(querySnaposhot => {
-                    const items = querySnaposhot.docs.map(doc => {
-                        var dateAr = doc.data().DueDate.split('-');
-                        var newDate = dateAr[2] + '.' + dateAr[1] + '.' + dateAr[0].slice(-2);
-                        if (SelectorDate == "00-00-00"){
-                            displayDate = "style='display:none'"
-                        }else{
-                            displayDate = ""
-                        }
-
-                        if (status){
-                            faEdition = "fas"
-                        }else{
-                            faEdition = "far"
-                        }
-                        return `
-                    <tr>
-                    <td class="w-10"><a href="#" id="${doc.id}" class="removeTask"><i class="${faEdition} fa-circle taskCircle" ></i></a></td>
-                    <td class="w-50 "><p style="text-align: left;">${doc.data().Name}</p></td>
-                    <td class="w-40" ${displayDate}><p><i class="fas fa-arrow-right"></i> ${newDate}</p></td>
-                    </tr>
-                    `
-                    })
-                    thingsList.innerHTML = items.join('')
+                    if  (!status){
+                        window.items = querySnaposhot.docs
+                        $(".timeSelector").each(function(){
+                            if ($(this).hasClass("timeSelectorActive")){
+                                RenderTasks(this.id)
+                            }
+                        })
+                    }else{
+                        console.log("status: "+ status);
+                        console.log(querySnaposhot.docs);
+                        return querySnaposhot.docs
+                    }
                 })
         }
 
+        function RenderTasks(date){
+            //console.log("Today: < "+getDate(0, "00:00").seconds)
+            //console.log("Tomorrow: >"+  getDate(1, "00:00").seconds +" && < " + getDate(2, "00:00").seconds)
+            //console.log("Planned: <"+  getDate(2, "00:00").seconds)
+            //console.log("--------------------");
 
+            const tableData = window.items.map(doc =>{
+                if (doc.data().DueDate != null){
+                    const dateObject = new Date(doc.data().DueDate.seconds * 1000)
+                    if (date == "selectorToday" && doc.data().DueDate.seconds <= getDate(0, "00:00").seconds){
+                        const humanDateFormat = dateObject.toLocaleString("en-US", {hour: "2-digit", minute: "2-digit", hour12: false});
+                        return taskDiv(doc.id, doc.data().Name, humanDateFormat)
+                    }
+                    else if (date == "selectorTomorrow" && (doc.data().DueDate.seconds >= getDate(1, "00:00").seconds && doc.data().DueDate.seconds < getDate(2, "00:00").seconds)){
+                        const humanDateFormat = dateObject.toLocaleString("en-US", {hour: "2-digit", minute: "2-digit", hour12: false});
+                        return taskDiv(doc.id, doc.data().Name, humanDateFormat)
+                    }
+                    else if (date == "selectorPlanned" && doc.data().DueDate.seconds > getDate(2, "00:00").seconds){
+                        const humanDateFormat = dateObject.toLocaleString("en-US", {year: 'numeric', month: 'long', day: 'numeric', hour: "2-digit", minute: "2-digit", hour12: false});
+                        return taskDiv(doc.id, doc.data().Name, humanDateFormat)
+                    }
+                }
+                else if (date == "selectorAnytime"){
+                    console.log("Anytime: "+doc.data().Name)
+                    return `
+                            <div class="d-flex justify-content-start mb-4">
+                                <div class="w-5"><a href="#" id="${doc.id}" class="removeTask"><i class="far fa-circle taskCircle" ></i></a></div>
+                                <div class="w-50 align-self-center"><p class="mb-0">${doc.data().Name}</p></div>
+                            </div>
+                        `
+                }
+            })
+            thingsList.innerHTML = tableData.join('')
+        }
 
-        $("#taskList").on('click', ".removeTask", function () {
+        /*
+        else if (date == "selectorDone"){
+            console.log("Done task");
+            done = displayTask(true).then(function(){
+                done.map(task =>{
+                    return`
+                    <div class="d-flex justify-content-start my-5">
+                    <div class="w-10"><a href="#" id="${task.id}" class="reAddTask"><i class="fas fa-circle taskCircle" ></i></a></div>
+                    <div class="w-30 align-self-center"><p class="mb-0">${task.data().name}</p></div>
+                    <div class="w-20 align-self-center"><a href="#" class="btn btn-success">Work</a></div>
+                    <div class="w-20 align-self-center"><p class="mb-0">${task.data().date}</p></div>
+                    <div class="w-20 align-self-center"><a href="#" class="editButton">Edit</a></div>
+                    </div>
+                    `
+                })
+            })
+        }
+        */
+        function taskDiv(id, name, date) {
+            return `
+                <div class="d-flex justify-content-start my-5">
+                    <div class="w-5"><a href="#" id="${id}" class="removeTask"><i class="far fa-circle taskCircle" ></i></a></div>
+                    <div class="w-30 align-self-center"><p class="mb-0">${name}</p></div>
+                    <div class="w-25 align-self-center"><a href="#" class="btn btn-success">Work</a></div>
+                    <div class="w-20 align-self-center"><p class="mb-0">${date}</p></div>
+                    <div class="w-20 align-self-center"><a href="#" class="editButton">Edit</a></div>
+                </div>
+            `
+        }
+
+        $("#taskListV2").on('click', ".removeTask", function () {
             thingsRef.doc(this.id).update({
                 uid: user.uid,
                 Status: true
             });
         });
+
+        
+
 
     } else {
         unsubscribe && unsubscribe()
