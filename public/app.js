@@ -237,9 +237,16 @@ auth.onAuthStateChanged(user => {
             console.log(id);
             console.log(thingsRef.doc(id).get());
         });
+        
+        
+        $("#openTagManager").on("click", function(){
+            $('#tagManager').modal('show')
 
+        })
 
     } else {
         unsubscribe && unsubscribe()
     }
 })
+
+

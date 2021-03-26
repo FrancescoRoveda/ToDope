@@ -26,11 +26,21 @@ h1{
 p {
     font-weight: 300;
 }
-#logout{
+
+.controlButtons {
     position: absolute;
     top: 10px;
-    right: 10px;
-    width: 100px;
+    right: 0px;
+    width: auto;
+}
+
+.btn-secondary, .btn-secondary:active{
+    background-color: #000;
+}
+
+.btn-secondary:hover{
+    background-color: #000;
+    border-color: #fff;
 }
 
 #loginContainer{
@@ -112,3 +122,92 @@ tr, td{
     background-color: #000;
     z-index: -100;
 }
+
+.ver{
+    position: absolute;
+    color: #ffffff61;
+    bottom: 0;
+    right: 0;
+}
+
+.pickColor {
+    height: 30px;
+    width: 30px;
+    border-radius: 50%;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+
+
+/*the container must be positioned relative:*/
+.color-select {
+    position: relative;
+    font-family: Arial;
+}
+
+.color-select select {
+    display: none;
+    /*hide original SELECT element:*/
+}
+
+.select-selected {
+    background-color: DodgerBlue;
+}
+
+/*style the arrow inside the select element:*/
+.select-selected:after {
+    position: absolute;
+    content: "";
+    top: 14px;
+    right: 10px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-color: #fff transparent transparent transparent;
+}
+
+/*point the arrow upwards when the select box is open (active):*/
+.select-selected.select-arrow-active:after {
+    border-color: transparent transparent #fff transparent;
+    top: 7px;
+}
+
+/*style the items (options), including the selected item:*/
+.select-items div,
+.select-selected {
+    color: #ffffff;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-color: transparent transparent rgba(0, 0, 0, 0.1) transparent;
+    cursor: pointer;
+    user-select: none;
+}
+
+/*style items (options):*/
+.select-items {
+    position: absolute;
+    background-color: #000;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 99;
+}
+
+/*hide the items when the select box is closed:*/
+.select-hide {
+    display: none;
+}
+
+.select-items div:hover,
+.same-as-selected {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+.testing{
+    position: absolute;
+    top:500;
+    height:1000px
+}
+
