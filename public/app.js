@@ -1,3 +1,4 @@
+//firebase emulators:start --import=localFirebase
 const auth = firebase.auth()
 const provider = new firebase.auth.GoogleAuthProvider()
 
@@ -20,12 +21,8 @@ auth.onAuthStateChanged(user => {
     if (user) {
         $("#loginContainer").hide();
         $("#dashboard").show();
-        $("particles-js").remove()
     } else {
         console.log("not logged in");
-        particlesJS.load('particles-js', '/static/js/particlesjs-config.json', function() {
-            console.log('callback - particles.js config loaded');
-        });
         $("#loginContainer").show();
         $("#dashboard").hide();
     }
@@ -146,10 +143,10 @@ auth.onAuthStateChanged(user => {
                     window.items = querySnaposhot.docs
                     $(".timeSelector").each(function(){
                         if ($(this).hasClass("timeSelectorActive")){
+                            console.log("rendering tasks: "+this.id);
                             RenderTasks(this.id)
                         }
                     })
-                    
                 })
         }
 
@@ -195,27 +192,32 @@ auth.onAuthStateChanged(user => {
                 </div>
             `
         }
-
+        
         function DoneTasks(){
-            unsubscribe = thingsRef
+            unsubscribe2 = thingsRef
                 .where('uid', '==', user.uid)
                 .where("Status", "==", true)
                 .orderBy("DueDate", "asc")
-                .onSnapshot(querySnaposhot => {
-                    const done = querySnaposhot.docs.map(task =>{
+                .get()
+                .then((querySnapshot) => {
+                    const done = querySnapshot.docs.map(task =>{
                         const dateObject = new Date(task.data().DueDate.seconds * 1000)
-                    return`
-                        <div class="d-flex justify-content-start my-5">
-                            <div class="w-10"><a href="#" id="${task.id}" class="reAddTask"><i class="fas fa-circle taskCircle" ></i></a></div>
-                            <div class="w-30 align-self-center"><p class="mb-0">${task.data().Name}</p></div>
-                            <div class="w-20 align-self-center"><a href="#" class="btn btn-success">Work</a></div>
-                            <div class="w-20 align-self-center"><p class="mb-0">${dateObject.toLocaleString("en-EN", {year: 'numeric', month: 'long', day: 'numeric', hour: "2-digit", minute: "2-digit", hour12: false})}</p></div>
-                            <div class="w-20 align-self-center"><a href="#" class="editTask">Edit</a></div>
-                        </div>
-                    `
+                        return`
+                            <div class="d-flex justify-content-start my-5">
+                                <div class="w-10"><a href="#" id="${task.id}" class="reAddTask"><i class="fas fa-circle taskCircle" ></i></a></div>
+                                <div class="w-30 align-self-center"><p class="mb-0">${task.data().Name}</p></div>
+                                <div class="w-20 align-self-center"><a href="#" class="btn btn-success">Work</a></div>
+                                <div class="w-20 align-self-center"><p class="mb-0">${dateObject.toLocaleString("en-EN", {year: 'numeric', month: 'long', day: 'numeric', hour: "2-digit", minute: "2-digit", hour12: false})}</p></div>
+                                <div class="w-20 align-self-center"><a href="#" class="editTask">Edit</a></div>
+                            </div>
+                        `
+                    });
+                    thingsList.innerHTML = done.join('')
                 })
-                thingsList.innerHTML = done.join('')
-            })
+                .catch((error) => {
+                    console.log("Error getting documents: ", error);
+            });
+
         }
 
         $("#taskListV2").on('click', ".removeTask", function () {
@@ -225,27 +227,16 @@ auth.onAuthStateChanged(user => {
             });
         });
         $("#taskListV2").on('click', ".reAddTask", function () {
-            thingsRef.doc(this.id).get({
+            thingsRef.doc(this.id).update({
                 uid: user.uid,
                 Status: false
             });
-        });
-
-        $("#taskListV2").on('click', ".editTask", function () {
-            $('#addTaskModal').modal('show')
-            const id = $(this).attr("edit-id")
-            console.log(id);
-            console.log(thingsRef.doc(id).get());
+            DoneTasks()
         });
         
-        
-        $("#openTagManager").on("click", function(){
-            $('#tagManager').modal('show')
-
-        })
 
     } else {
-        unsubscribe && unsubscribe()
+        unsubscribe && unsubscribe2 && unsubscribe()
     }
 })
 
